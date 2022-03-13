@@ -1,4 +1,4 @@
-# AdaRL-code
+# AdaRL
 
 Implementation codes and datasets used in paper **AdaRL: What, Where, and How to Adapt in Transfer Reinforcement Learning (ICLR'22 Spotlight)**.
 
