@@ -29,6 +29,5 @@ If you find our work helpful to your research, please consider citing our paper:
 
 ---
 
-Full information will be updated before ICLR'22 conference starts.
-
+Full information will be updated before/upon ICLR'22 conference starts.
 
