@@ -1,5 +1,5 @@
 # AdaRL-code
-Implementation codes and datasets used in ICLR'22 Spotlight paper AdaRL: What, Where, and How to Adapt in Transfer Reinforcement Learning.
+Implementation codes and datasets used in ICLR'22 Spotlight paper **AdaRL: What, Where, and How to Adapt in Transfer Reinforcement Learning**.
 
 More information will be updated before ICLR'22 conference starts.
 
