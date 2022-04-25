@@ -43,22 +43,22 @@ def default_hps(game, step, n_domain=5):
         action_size = 1
 
     if step == 0:
-        bs = 20
+        bs = 64
         lr = 0.01
         dr = 0.999
         is_train = 1
     elif step == 1:
-        bs = 10
+        bs = 64
         lr = 0.0001
         dr = 1.0
         is_train = 0
     elif step == 2:
-        bs = 100
+        bs = 128
         lr = 0.001
         dr = 0.999
         is_train = 1
     elif step == 3:
-        bs = 20
+        bs = 128
         lr = 0.001
         dr = 0.999
         is_train = 1

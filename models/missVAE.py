@@ -188,177 +188,169 @@ class missVAE(object):
             obs_r = tf.reshape(self.input_r, [-1, self.hps.reward_size])
 
             with tf.variable_scope('Encoder', reuse=tf.AUTO_REUSE):
-                with tf.device('gpu:0'):
-                    # obs_x
-                    hx = tf.layers.conv2d(obs_x, 32, 4, strides=2, activation=tf.nn.relu, name="enc_conv1")
-                    hx = tf.layers.conv2d(hx, 64, 4, strides=2, activation=tf.nn.relu, name="enc_conv2")
-                    hx = tf.layers.conv2d(hx, 128, 4, strides=2, activation=tf.nn.relu, name="enc_conv3")
-                    hx = tf.layers.conv2d(hx, 256, 4, strides=2, activation=tf.nn.relu, name="enc_conv4")
-                    hx = tf.reshape(hx, [-1, 6 * 6 * 256])
+                # obs_x
+                hx = tf.layers.conv2d(obs_x, 32, 4, strides=2, activation=tf.nn.relu, name="enc_conv1")
+                hx = tf.layers.conv2d(hx, 64, 4, strides=2, activation=tf.nn.relu, name="enc_conv2")
+                hx = tf.layers.conv2d(hx, 128, 4, strides=2, activation=tf.nn.relu, name="enc_conv3")
+                hx = tf.layers.conv2d(hx, 256, 4, strides=2, activation=tf.nn.relu, name="enc_conv4")
+                hx = tf.reshape(hx, [-1, 6 * 6 * 256])
 
-                    # obs_a
-                    ha = tf.layers.dense(obs_a_prev, 1 * 128, activation=tf.nn.relu, name="enc_action_fc1")
+                # obs_a
+                ha = tf.layers.dense(obs_a_prev, 1 * 128, activation=tf.nn.relu, name="enc_action_fc1")
 
-                    # obs_r
-                    hr = tf.layers.dense(obs_r_prev, 1 * 128, activation=tf.nn.relu, name="enc_reward_fc1")
+                # obs_r
+                hr = tf.layers.dense(obs_r_prev, 1 * 128, activation=tf.nn.relu, name="enc_reward_fc1")
 
-                    theta0_o = []
-                    theta0_s = []
-                    theta0_r = []
-                    for i in range(self.hps.batch_size):
-                        d_idx = tf.slice(self.input_domain_index, [i], [1])
-                        tmp_o = tf.transpose(self.theta_o[:, d_idx[0]])
-                        tmp_o = tf.stack([tmp_o] * self.hps.max_seq_len)
-                        theta0_o.append(tmp_o)
-                        tmp_s = tf.transpose(self.theta_s[:, d_idx[0]])
-                        tmp_s = tf.stack([tmp_s] * self.hps.max_seq_len)
-                        theta0_s.append(tmp_s)
-                        tmp_r = tf.transpose(self.theta_r[:, d_idx[0]])
-                        tmp_r = tf.stack([tmp_r] * self.hps.max_seq_len)
-                        theta0_r.append(tmp_r)
-                    theta0_o = tf.convert_to_tensor(theta0_o)
-                    theta0_o = tf.reshape(theta0_o, [-1, self.hps.theta_o_size])
-                    theta0_s = tf.convert_to_tensor(theta0_s)
-                    theta0_s = tf.reshape(theta0_s, [-1, self.hps.theta_s_size])
-                    theta0_r = tf.convert_to_tensor(theta0_r)
-                    theta0_r = tf.reshape(theta0_r, [-1, self.hps.theta_r_size])
-                    theta0 = tf.concat([theta0_o, theta0_s, theta0_r], 1)
-                    hd = tf.layers.dense(theta0, 3 * 128, activation=tf.nn.relu, name="enc_domain_fc1")
-                    h_xard = tf.concat([hx, ha, hr, hd], 1)
+                theta0_o = []
+                theta0_s = []
+                theta0_r = []
+                for i in range(self.hps.batch_size):
+                    d_idx = tf.slice(self.input_domain_index, [i], [1])
+                    tmp_o = tf.transpose(self.theta_o[:, d_idx[0]])
+                    tmp_o = tf.stack([tmp_o] * self.hps.max_seq_len)
+                    theta0_o.append(tmp_o)
+                    tmp_s = tf.transpose(self.theta_s[:, d_idx[0]])
+                    tmp_s = tf.stack([tmp_s] * self.hps.max_seq_len)
+                    theta0_s.append(tmp_s)
+                    tmp_r = tf.transpose(self.theta_r[:, d_idx[0]])
+                    tmp_r = tf.stack([tmp_r] * self.hps.max_seq_len)
+                    theta0_r.append(tmp_r)
+                theta0_o = tf.convert_to_tensor(theta0_o)
+                theta0_o = tf.reshape(theta0_o, [-1, self.hps.theta_o_size])
+                theta0_s = tf.convert_to_tensor(theta0_s)
+                theta0_s = tf.reshape(theta0_s, [-1, self.hps.theta_s_size])
+                theta0_r = tf.convert_to_tensor(theta0_r)
+                theta0_r = tf.reshape(theta0_r, [-1, self.hps.theta_r_size])
+                theta0 = tf.concat([theta0_o, theta0_s, theta0_r], 1)
+                hd = tf.layers.dense(theta0, 3 * 128, activation=tf.nn.relu, name="enc_domain_fc1")
+                h_xard = tf.concat([hx, ha, hr, hd], 1)
                 ################################################### LSTM ###################################################
-                with tf.device('gpu:0'):
-                    cell = WeightNormLSTMCell(self.hps.rnn_size, norm=True)
-                    self.cell = cell
-                    input_h = tf.reshape(h_xard, [self.hps.batch_size, self.seq_length, 6 * 6 * 256 + 5 * 128])
-                    self.initial_state = cell.zero_state(batch_size=self.hps.batch_size, dtype=tf.float32)
-                    NOUT = self.hps.output_seq_width * self.hps.num_mixture * 3  # bh: 3 means out_logmix, out_mean, out_logstd
+                cell = WeightNormLSTMCell(self.hps.rnn_size, norm=True)
+                self.cell = cell
+                input_h = tf.reshape(h_xard, [self.hps.batch_size, self.seq_length, 6 * 6 * 256 + 5 * 128])
+                self.initial_state = cell.zero_state(batch_size=self.hps.batch_size, dtype=tf.float32)
+                NOUT = self.hps.output_seq_width * self.hps.num_mixture * 3  # bh: 3 means out_logmix, out_mean, out_logstd
 
-                    with tf.variable_scope('RNN'):
-                        output_w = tf.get_variable("output_w", [self.hps.rnn_size, NOUT],
-                                                   initializer=tf.contrib.layers.xavier_initializer())
-                        output_w = tf.nn.l2_normalize(output_w, [0])
-                        output_b = tf.get_variable("output_b", [NOUT],
-                                                   initializer=tf.contrib.layers.xavier_initializer())
+                with tf.variable_scope('RNN'):
+                    output_w = tf.get_variable("output_w", [self.hps.rnn_size, NOUT],
+                                               initializer=tf.contrib.layers.xavier_initializer())
+                    output_w = tf.nn.l2_normalize(output_w, [0])
+                    output_b = tf.get_variable("output_b", [NOUT],
+                                               initializer=tf.contrib.layers.xavier_initializer())
 
-                    output, last_state = tf.nn.dynamic_rnn(cell, input_h, initial_state=self.initial_state,
-                                                           time_major=False, swap_memory=True, dtype=tf.float32,
-                                                           scope="RNN")
+                output, last_state = tf.nn.dynamic_rnn(cell, input_h, initial_state=self.initial_state,
+                                                       time_major=False, swap_memory=True, dtype=tf.float32,
+                                                       scope="RNN")
 
-                    output = tf.reshape(output, [-1, self.hps.rnn_size])
-                    output = tf.nn.xw_plus_b(output, output_w, output_b)
-                    output = tf.reshape(output, [-1, self.hps.num_mixture * 3])
-                    self.final_state = last_state
+                output = tf.reshape(output, [-1, self.hps.rnn_size])
+                output = tf.nn.xw_plus_b(output, output_w, output_b)
+                output = tf.reshape(output, [-1, self.hps.num_mixture * 3])
+                self.final_state = last_state
 
-                    ########################################## MDN-RNN ################################################
-                    out_logmix, out_mean, out_logstd = self.get_mdn_coef(output)
-                    self.out_logmix = out_logmix
-                    self.out_mean = out_mean
-                    self.out_logstd = out_logstd
+                ########################################## MDN-RNN ################################################
+                out_logmix, out_mean, out_logstd = self.get_mdn_coef(output)
+                self.out_logmix = out_logmix
+                self.out_mean = out_mean
+                self.out_logstd = out_logstd
 
-                    if self.step_est == 3:
-                        if self.hps.is_training == 0:
-                            # the index of the cluster which has the largest probability
-                            logmix_map_idx = tf.argmax(out_logmix, 1)
-                            out_mean_map = []
-                            for i in range(out_logmix.shape[0]):
-                                out_mean_map.append(out_mean[i, logmix_map_idx[i]])
-                            out_mean_map = tf.convert_to_tensor(out_mean_map)
-                            self.z_map = tf.reshape(out_mean_map, [-1, self.hps.output_seq_width])
+                if self.step_est == 3:
+                    if self.hps.is_training == 0:
+                        # the index of the cluster which has the largest probability
+                        logmix_map_idx = tf.argmax(out_logmix, 1)
+                        out_mean_map = []
+                        for i in range(out_logmix.shape[0]):
+                            out_mean_map.append(out_mean[i, logmix_map_idx[i]])
+                        out_mean_map = tf.convert_to_tensor(out_mean_map)
+                        self.z_map = tf.reshape(out_mean_map, [-1, self.hps.output_seq_width])
 
-                    logmix2 = out_logmix / self.hps.temperature
-                    logmix2 -= tf.reduce_max(logmix2)
-                    logmix2 = tf.exp(logmix2)
-                    logmix2 /= tf.reshape(tf.reduce_sum(logmix2, 1), [-1, 1])
+                logmix2 = out_logmix / self.hps.temperature
+                logmix2 -= tf.reduce_max(logmix2)
+                logmix2 = tf.exp(logmix2)
+                logmix2 /= tf.reshape(tf.reduce_sum(logmix2, 1), [-1, 1])
 
-                    mixture_len = self.hps.batch_size * self.seq_length * self.hps.output_seq_width
+                mixture_len = self.hps.batch_size * self.seq_length * self.hps.output_seq_width
 
-                    ########################################## Sampling from MDN-RNN ###########################################
-                    logmix2_list = [logmix2[:, 0]]
-                    for j in range(self.hps.num_mixture - 1):
-                        logmix2_list.append(logmix2[:, j + 1] + logmix2_list[j])
+                ########################################## Sampling from MDN-RNN ###########################################
+                logmix2_list = [logmix2[:, 0]]
+                for j in range(self.hps.num_mixture - 1):
+                    logmix2_list.append(logmix2[:, j + 1] + logmix2_list[j])
 
-                    logmix2 = tf.stack(logmix2_list, axis=1)
+                logmix2 = tf.stack(logmix2_list, axis=1)
 
-                    mixture_rand_idx = tf.tile(tf.random_uniform([mixture_len, 1]), [1, self.hps.num_mixture])
-                    zero_ref = tf.zeros_like(mixture_rand_idx)
+                mixture_rand_idx = tf.tile(tf.random_uniform([mixture_len, 1]), [1, self.hps.num_mixture])
+                zero_ref = tf.zeros_like(mixture_rand_idx)
 
-                    idx = tf.argmax(tf.cast(tf.less_equal(mixture_rand_idx - logmix2, zero_ref), tf.int32),
-                                    axis=1, output_type=tf.int32)
+                idx = tf.argmax(tf.cast(tf.less_equal(mixture_rand_idx - logmix2, zero_ref), tf.int32),
+                                axis=1, output_type=tf.int32)
 
-                    indices = tf.range(0, mixture_len) * self.hps.num_mixture + idx
-                    chosen_mean = tf.gather(tf.reshape(out_mean, [-1]), indices)
-                    chosen_logstd = tf.gather(tf.reshape(out_logstd, [-1]), indices)
+                indices = tf.range(0, mixture_len) * self.hps.num_mixture + idx
+                chosen_mean = tf.gather(tf.reshape(out_mean, [-1]), indices)
+                chosen_logstd = tf.gather(tf.reshape(out_logstd, [-1]), indices)
 
-                    rand_gaussian = tf.random_normal([mixture_len]) * np.sqrt(self.hps.temperature)
-                    sample_z = chosen_mean + tf.exp(chosen_logstd) * rand_gaussian
+                rand_gaussian = tf.random_normal([mixture_len]) * np.sqrt(self.hps.temperature)
+                sample_z = chosen_mean + tf.exp(chosen_logstd) * rand_gaussian
 
-                    self.z = tf.reshape(sample_z, [-1, self.hps.output_seq_width])
+                self.z = tf.reshape(sample_z, [-1, self.hps.output_seq_width])
 
             ############################################# Decoder ##########################################################
-            with tf.device("gpu:1"):
-                # Decoder for Observation: o_t = f(A * s_t, theta_o, e_t)
-                ssl_zo = tf.multiply(self.z, self.SSL_A)  # SSL from state to observation
-                with tf.variable_scope('ObsDecoder', reuse=tf.AUTO_REUSE):
-                    h1 = tf.layers.dense(ssl_zo, 6 * 6 * 256, kernel_constraint=self.deconv_weightnorm, name="dec_fc")
-                    # theta_o MLP and then concatenate , notice the shape. flexible when to concatenate with h, need tuning
-                    h2 = tf.layers.dense(theta0_o, 1 * 256, kernel_constraint=self.deconv_weightnorm,
-                                         name="dec_theta_o")
-                    h = tf.concat([h1, h2], 1)
-                    h = tf.reshape(h, [-1, 1, 1, 37 * 256])
+            # Decoder for Observation: o_t = f(A * s_t, theta_o, e_t)
+            ssl_zo = tf.multiply(self.z, self.SSL_A)  # SSL from state to observation
+            with tf.variable_scope('ObsDecoder', reuse=tf.AUTO_REUSE):
+                h1 = tf.layers.dense(ssl_zo, 6 * 6 * 256, kernel_constraint=self.deconv_weightnorm, name="dec_fc")
+                # theta_o MLP and then concatenate , notice the shape. flexible when to concatenate with h, need tuning
+                h2 = tf.layers.dense(theta0_o, 1 * 256, kernel_constraint=self.deconv_weightnorm,
+                                     name="dec_theta_o")
+                h = tf.concat([h1, h2], 1)
+                h = tf.reshape(h, [-1, 1, 1, 37 * 256])
 
-                    with tf.device("gpu:2"):
-                        h = tf.layers.conv2d_transpose(h, 256, 5, strides=2, activation=tf.nn.relu,
-                                                       kernel_constraint=self.deconv_weightnorm, name="dec_deconv1")
-                        h = tf.layers.conv2d_transpose(h, 128, 5, strides=2, activation=tf.nn.relu,
-                                                       kernel_constraint=self.deconv_weightnorm, name="dec_deconv2")
-                        h = tf.layers.conv2d_transpose(h, 64, 5, strides=2, activation=tf.nn.relu,
-                                                       kernel_constraint=self.deconv_weightnorm, name="dec_deconv3")
+                h = tf.layers.conv2d_transpose(h, 256, 5, strides=2, activation=tf.nn.relu,
+                                               kernel_constraint=self.deconv_weightnorm, name="dec_deconv1")
+                h = tf.layers.conv2d_transpose(h, 128, 5, strides=2, activation=tf.nn.relu,
+                                               kernel_constraint=self.deconv_weightnorm, name="dec_deconv2")
+                h = tf.layers.conv2d_transpose(h, 64, 5, strides=2, activation=tf.nn.relu,
+                                               kernel_constraint=self.deconv_weightnorm, name="dec_deconv3")
+                h = tf.layers.conv2d_transpose(h, 32, 6, strides=2, activation=tf.nn.relu,
+                                               kernel_constraint=self.deconv_weightnorm, name="dec_deconv4")
+                self.y_o = tf.layers.conv2d_transpose(h, 1, 6, strides=2, activation=tf.nn.tanh,
+                                                      kernel_constraint=self.deconv_weightnorm,
+                                                      name="dec_deconv5")
+            # Decoder for Next Observation
+            z_next = tf.reshape(self.z, [self.hps.batch_size, self.seq_length, self.hps.output_seq_width])
 
-                    with tf.device("gpu:1"):
-                        h = tf.layers.conv2d_transpose(h, 32, 6, strides=2, activation=tf.nn.relu,
-                                                       kernel_constraint=self.deconv_weightnorm, name="dec_deconv4")
-                        self.y_o = tf.layers.conv2d_transpose(h, 1, 6, strides=2, activation=tf.nn.tanh,
-                                                              kernel_constraint=self.deconv_weightnorm,
-                                                              name="dec_deconv5")
-                # Decoder for Next Observation
-                z_next = tf.reshape(self.z, [self.hps.batch_size, self.seq_length, self.hps.output_seq_width])
+            if self.hps.is_training == 1:
+                z_next = tf.reshape(z_next[:, :-1, :], [-1, self.hps.output_seq_width])
+            else:
+                z_next = tf.reshape(z_next, [-1, self.hps.output_seq_width])
 
-                if self.hps.is_training == 1:
-                    z_next = tf.reshape(z_next[:, :-1, :], [-1, self.hps.output_seq_width])
-                else:
-                    z_next = tf.reshape(z_next, [-1, self.hps.output_seq_width])
-            with tf.device("gpu:1"):
-                with tf.variable_scope('NextObsDecoder', reuse=tf.AUTO_REUSE):
-                    nh = tf.layers.dense(z_next, 6 * 6 * 256, kernel_constraint=self.deconv_weightnorm, name="dec_fc")
-                    with tf.device("gpu:3"):
-                        nh = tf.reshape(nh, [-1, 1, 1, 6 * 6 * 256])
-                        nh = tf.layers.conv2d_transpose(nh, 256, 5, strides=2, activation=tf.nn.relu,
-                                                        kernel_constraint=self.deconv_weightnorm, name="dec_deconv1")
-                        nh = tf.layers.conv2d_transpose(nh, 128, 5, strides=2, activation=tf.nn.relu,
-                                                        kernel_constraint=self.deconv_weightnorm, name="dec_deconv2")
-                        nh = tf.layers.conv2d_transpose(nh, 64, 5, strides=2, activation=tf.nn.relu,
-                                                        kernel_constraint=self.deconv_weightnorm, name="dec_deconv3")
-                    with tf.device("gpu:0"):
-                        nh = tf.layers.conv2d_transpose(nh, 32, 6, strides=2, activation=tf.nn.relu,
-                                                        kernel_constraint=self.deconv_weightnorm, name="dec_deconv4")
+            with tf.variable_scope('NextObsDecoder', reuse=tf.AUTO_REUSE):
+                nh = tf.layers.dense(z_next, 6 * 6 * 256, kernel_constraint=self.deconv_weightnorm, name="dec_fc")
+                nh = tf.reshape(nh, [-1, 1, 1, 6 * 6 * 256])
+                nh = tf.layers.conv2d_transpose(nh, 256, 5, strides=2, activation=tf.nn.relu,
+                                                kernel_constraint=self.deconv_weightnorm, name="dec_deconv1")
+                nh = tf.layers.conv2d_transpose(nh, 128, 5, strides=2, activation=tf.nn.relu,
+                                                kernel_constraint=self.deconv_weightnorm, name="dec_deconv2")
+                nh = tf.layers.conv2d_transpose(nh, 64, 5, strides=2, activation=tf.nn.relu,
+                                                kernel_constraint=self.deconv_weightnorm, name="dec_deconv3")
+                nh = tf.layers.conv2d_transpose(nh, 32, 6, strides=2, activation=tf.nn.relu,
+                                                kernel_constraint=self.deconv_weightnorm, name="dec_deconv4")
 
-                        self.y_o_next = tf.layers.conv2d_transpose(nh, 1, 6, strides=2, activation=tf.nn.tanh,
-                                                                   kernel_constraint=self.deconv_weightnorm,
-                                                                   name="dec_deconv5")
+                self.y_o_next = tf.layers.conv2d_transpose(nh, 1, 6, strides=2, activation=tf.nn.tanh,
+                                                           kernel_constraint=self.deconv_weightnorm,
+                                                           name="dec_deconv5")
 
-                # Decoder for Reward: r_t = g(B * s_t, C * a_t, theta_r, epsilon_t)
-                ssl_zr = tf.multiply(self.z, self.SSL_B)  # SSL for state to reward
-                ssl_ar = tf.multiply(obs_a, self.SSL_C)  # SSL for action to reward
-                ssl_zar = tf.concat([ssl_zr, ssl_ar], 1)
-                with tf.variable_scope('RewardDecoder', reuse=tf.AUTO_REUSE):
-                    lin_h1 = tf.layers.dense(ssl_zar, 4 * 128, activation=tf.nn.relu,
-                                             kernel_constraint=self.deconv_weightnorm, name="dec_fc1")
-                    lin_h2 = tf.layers.dense(theta0_r, 1 * 128, activation=tf.nn.relu,
-                                             kernel_constraint=self.deconv_weightnorm, name="dec_theta_r1")
-                    lin_h = tf.concat([lin_h1, lin_h2], 1)
-                    lin_h = tf.layers.dense(lin_h, 1 * 128, activation=tf.nn.relu,
-                                            kernel_constraint=self.deconv_weightnorm, name="dec_fc2")
-                    self.y_r = tf.layers.dense(lin_h, 1, kernel_constraint=self.deconv_weightnorm, name="dec_fc3")
+            # Decoder for Reward: r_t = g(B * s_t, C * a_t, theta_r, epsilon_t)
+            ssl_zr = tf.multiply(self.z, self.SSL_B)  # SSL for state to reward
+            ssl_ar = tf.multiply(obs_a, self.SSL_C)  # SSL for action to reward
+            ssl_zar = tf.concat([ssl_zr, ssl_ar], 1)
+            with tf.variable_scope('RewardDecoder', reuse=tf.AUTO_REUSE):
+                lin_h1 = tf.layers.dense(ssl_zar, 4 * 128, activation=tf.nn.relu,
+                                         kernel_constraint=self.deconv_weightnorm, name="dec_fc1")
+                lin_h2 = tf.layers.dense(theta0_r, 1 * 128, activation=tf.nn.relu,
+                                         kernel_constraint=self.deconv_weightnorm, name="dec_theta_r1")
+                lin_h = tf.concat([lin_h1, lin_h2], 1)
+                lin_h = tf.layers.dense(lin_h, 1 * 128, activation=tf.nn.relu,
+                                        kernel_constraint=self.deconv_weightnorm, name="dec_fc2")
+                self.y_r = tf.layers.dense(lin_h, 1, kernel_constraint=self.deconv_weightnorm, name="dec_fc3")
             if self.step_est == 3:
                 lossfunc = self.markovian_tran()
         ######################################## Loss Function #########################################################

@@ -96,6 +96,9 @@ python test.py -name cartpole -source ./dataset/Cartpole/G_len40_xthreshold5_the
 python test.py -name cartpole -source ./dataset/Cartpole/G_len40_xthreshold5_thetathreshold45_trial10000 -dest ./dataset/Cartpole/G_len40_xthreshold5_thetathreshold45_trial10000/v_test -domain 05 06 -mvae_p ./results/Cartpole/G_len40_xthreshold5_thetathreshold45_trial10000/all/{TIME_NOW}/all.json -k 0 -step 2
 ```
 
+## Notes
+The model estimation stage will cost much CUDA memory. Thus GPU devices with large memory (e.g., V100 cards) are required. 
+
 ## Citation
 
 If you find our work helpful to your research, please consider citing our paper:
