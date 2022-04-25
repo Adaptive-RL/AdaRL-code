@@ -97,7 +97,7 @@ python test.py -name cartpole -source ./dataset/Cartpole/G_len40_xthreshold5_the
 ```
 
 ## Notes
-The model estimation stage will cost much CUDA memory. Thus GPU devices with large memory (e.g., V100 cards) are required. 
+The model estimation stage will cost much CUDA memory. Thus GPU devices with large memory (e.g., V100 cards) are required. Pytorch version will be released later. 
 
 ## Citation
 
