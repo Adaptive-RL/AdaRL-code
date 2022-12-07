@@ -805,7 +805,7 @@ class missVAE(object):
                         self.sess.run(assign_op, feed_dict={pl.name: p / 10000.})
                     idx += 1
         else:
-            if self.step_est == 0:
+            if self.step_est == 0 or self.step_est == 1:
                 with self.g.as_default():
                     t_vars = tf.trainable_variables()
                     idx = 0
@@ -865,7 +865,7 @@ class missVAE(object):
                                 assert pshape == p.shape, "inconsistent shape"
                                 assign_op, pl = self.assign_ops[var]
                                 self.sess.run(assign_op, feed_dict={pl.name: p / 10000.})
-                            idx += 1
+                                idx += 1
                     else:
                         for var in t_vars:
                             if var.name.startswith('SSL/A') or \
@@ -880,10 +880,11 @@ class missVAE(object):
                                     var.name.startswith('RewardDecoder'):
                                 pshape = tuple(var.get_shape().as_list())
                                 p = np.array(params[idx])
+                                # print(var.name, pshape, p.shape)
                                 assert pshape == p.shape, "inconsistent shape"
                                 assign_op, pl = self.assign_ops[var]
                                 self.sess.run(assign_op, feed_dict={pl.name: p / 10000.})
-                            idx += 1
+                                idx += 1
 
     def load_json(self, jsonfile='vae.json', is_dyn=False, is_tesing=False):
         with open(jsonfile, 'r') as f:

@@ -134,7 +134,7 @@ for m_step in range(4):
         mvae.load_json(os.path.join(dyn_p), is_dyn=True)
     if m_step == 1:
         vae_p = './results/' + data_indicator + '/' + model_est_steps[0] + '/' + time_now + '/vae.json'
-        mvae.load_json(os.path.join(vae_p))
+        mvae.load_json(os.path.join(vae_p), is_dyn=True)
         model_est_series(hps, mvae, N_batches, obs_dataset, action_dataset, reward_dataset, domain_dataset,
                          model_save_path)
     else:
